@@ -15,19 +15,43 @@
 <label for="seccion">Sección / Área</label><select id="seccion"><option value="">Selecciona una sección</option></select>
 <div id="otra-wrap" class="hidden"><label for="otra">Nombre de la sección</label><input id="otra" maxlength="100" placeholder="Escribe la sección"></div>
 <button id="iniciar">Iniciar sesión de asistencia</button>
-<div class="notice">Las secciones reales se configurarán cuando tengamos el listado de cada edificio.</div>
+<div class="notice"><span id="estado-secciones" role="status">Conectando con Google Sheets…</span></div>
 </section>
 <section id="registro" class="hidden"><h1>Registro de asistencia</h1><p id="resumen"></p><label>Ingresa tu RUT</label><input placeholder="12.345.678-9" disabled><div class="notice">Próximamente: búsqueda y registro de participantes.</div><button id="volver">Volver a configuración (demo)</button></section>
 </main><script>
 const $=id=>document.getElementById(id);
 const n=new Date();$('fecha').value=new Date(n.getTime()-n.getTimezoneOffset()*60000).toISOString().slice(0,10);
 for(const e of 'ABCDEFGHI')$('edificio').add(new Option('Edificio '+e,e));
-// Reemplazar las listas vacías con los nombres reales, una vez confirmados.
-const seccionesPorEdificio={A:[],B:[],C:[],D:[],E:[],F:[],G:[],H:[],I:[]};
+const API_URL='https://script.google.com/macros/s/AKfycbxzerbjRW1ykKbiAFj2usqKM7cQ3cnjS9jvlOBnQYb_CISYEs_p8v5wgyynLOOhlbZuow/exec';
+let seccionesPorEdificio={A:[],B:[],C:[],D:[],E:[],F:[],G:[],H:[],I:[]};
+function recibirSecciones(payload){
+ if(!payload||!payload.edificios||typeof payload.edificios!=='object'){mostrarError();return}
+ const nuevo={A:[],B:[],C:[],D:[],E:[],F:[],G:[],H:[],I:[]};
+ for(const [edificio,lista] of Object.entries(payload.edificios)){
+  const clave=edificio.trim().toUpperCase();
+  if(Object.prototype.hasOwnProperty.call(nuevo,clave)&&Array.isArray(lista)){
+   nuevo[clave]=[...new Set(lista.filter(x=>typeof x==='string'&&x.trim()).map(x=>x.trim()))].sort((a,b)=>a.localeCompare(b,'es'));
+  }
+ }
+ seccionesPorEdificio=nuevo;
+ $('estado-secciones').textContent='Secciones actualizadas desde Google Sheets.';
+ cargarSecciones();
+}
+function mostrarError(){$('estado-secciones').textContent='No se pudieron cargar las secciones. Puedes usar «Otra sección».'}
+function conectarSheets(){
+ const script=document.createElement('script');
+ const timer=setTimeout(()=>{script.remove();mostrarError()},12000);
+ const previo=window.recibirSecciones;
+ window.recibirSecciones=data=>{clearTimeout(timer);script.remove();previo(data)};
+ script.onerror=()=>{clearTimeout(timer);script.remove();mostrarError()};
+ script.src=API_URL+'?callback=recibirSecciones';
+ document.head.appendChild(script);
+}
 function cargarSecciones(){const s=$('seccion');s.replaceChildren(new Option('Selecciona una sección',''));for(const nombre of seccionesPorEdificio[$('edificio').value]||[])s.add(new Option(nombre,nombre));s.add(new Option('Otra sección (escribir)','__otra__'));$('otra-wrap').classList.add('hidden');$('otra').value=''}
 $('edificio').addEventListener('change',cargarSecciones);
 $('seccion').addEventListener('change',()=>{$('otra-wrap').classList.toggle('hidden',$('seccion').value!=='__otra__')});
 cargarSecciones();
+conectarSheets();
 $('iniciar').onclick=()=>{const area=$('seccion').value==='__otra__'?$('otra').value.trim():$('seccion').value;if(!$('fecha').value||!area){alert('Completa la fecha y selecciona o escribe una sección.');return}const [y,m,d]=$('fecha').value.split('-');$('resumen').textContent=d+'/'+m+'/'+y+' · Edificio '+$('edificio').value+' · '+area;$('config').classList.add('hidden');$('registro').classList.remove('hidden')};
 $('volver').onclick=()=>{$('registro').classList.add('hidden');$('config').classList.remove('hidden')};
 </script></body></html>
