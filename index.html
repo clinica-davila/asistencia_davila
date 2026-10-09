@@ -41,10 +41,10 @@
 <div id="rut-estado" class="status" role="status">Ingresa tu RUT para continuar.</div>
 <button id="continuar" type="button">Verificar RUT</button>
 <div id="paso-confirmacion" class="hidden">
-<div class="verified"><strong>RUT válido</strong><span>La identificación del funcionario estará disponible cuando conectemos el servicio protegido.</span></div>
+<div class="verified"><strong id="identificacion-titulo">Verificando identificación</strong><span id="identificacion-detalle">Consultando Maestros…</span></div>
 <button id="confirmar" type="button" disabled>Confirmar asistencia (próximamente)</button>
 </div>
-<div class="notice">Prueba de interfaz: no consulta funcionarios ni registra asistencias.</div>
+<div class="notice">Consulta de identificación en modo prueba: todavía no registra asistencias.</div>
 <div class="admin-bar"><button id="volver" type="button">Volver a configuración · Solo demostración</button></div>
 </section>
 </main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script>
@@ -103,16 +103,29 @@ function reiniciarRegistro(){
  $('rut').value='';
  $('rut-estado').textContent='Ingresa tu RUT para continuar.';
  $('paso-confirmacion').classList.add('hidden');
+ $('identificacion-titulo').textContent='Verificando identificación';
+ $('identificacion-detalle').textContent='Consultando Maestros…';
 }
 $('rut').addEventListener('input',()=>{$('paso-confirmacion').classList.add('hidden');$('rut-estado').textContent='Ingresa tu RUT para continuar.'});
 $('rut').addEventListener('keydown',e=>{if(e.key==='Enter')$('continuar').click()});
-$('continuar').onclick=()=>{
- if(!rutValido($('rut').value)){
-  $('rut-estado').textContent='El RUT no es válido. Revisa el número y el dígito verificador.';
-  $('paso-confirmacion').classList.add('hidden');return;
- }
+$('continuar').onclick=async()=>{
+ if(!adminAutorizado){bloquearAcceso('Inicia sesión para continuar.');return}
+ const rutIngresado=$('rut').value;
+ if(!rutValido(rutIngresado)){$('rut-estado').textContent='El RUT no es válido. Revisa el número y el dígito verificador.';$('paso-confirmacion').classList.add('hidden');return}
  $('rut-estado').textContent='Formato y dígito verificador correctos.';
  $('paso-confirmacion').classList.remove('hidden');
+ $('identificacion-titulo').textContent='Buscando funcionario…';
+ $('identificacion-detalle').textContent='Consultando Maestros de forma protegida.';
+ $('continuar').disabled=true;
+ try{
+  const {data:{session}}=await sb.auth.getSession();if(!session)throw Error('Sesión expirada');
+  const response=await fetch('https://gfeqnqaaruadocgddhyl.supabase.co/functions/v1/davila-identificar',{method:'POST',headers:{'authorization':'Bearer '+session.access_token,'apikey':'sb_publishable_IBQ6XkpiSMPzTE6GXzT2KA_crp15-H4','content-type':'application/json'},body:JSON.stringify({rut:rutIngresado})});
+  const data=await response.json();if(!response.ok)throw Error(data.error||'Error del servidor');
+  if($('rut').value!==rutIngresado)return;
+  $('identificacion-titulo').textContent=data.found?'Funcionario encontrado':'Funcionario no encontrado';
+  $('identificacion-detalle').textContent=data.found?([data.nombre,data.apellido].filter(Boolean).join(' ')+' · '+(data.seccion||'Sección no indicada')):'Este RUT no figura en Maestros. La inscripción se habilitará en una etapa posterior.';
+ }catch(error){if($('rut').value===rutIngresado){$('identificacion-titulo').textContent='No se pudo verificar';$('identificacion-detalle').textContent=error.message||'Error de conexión';}}
+ finally{$('continuar').disabled=false}
 };
 $('volver').onclick=()=>{reiniciarRegistro();$('registro').classList.add('hidden');$('config').classList.remove('hidden')};
 </script></body></html>
