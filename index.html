@@ -18,11 +18,13 @@
 #registro .verified strong{display:block;margin-bottom:5px}
 @media(max-height:750px){.card{padding:18px 24px}#registro h1{margin:6px 0}#registro #resumen{margin:3px 0 9px}#registro .rut-input{padding:10px}}
 
+#login h1{font-size:25px;margin:14px 0 8px}#login .notice{text-align:left}#login button{margin-top:12px}.session-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:#61727a;margin:8px 0}.session-bar button{width:auto;margin:0;padding:7px 10px;font-size:12px;background:#e9f0f1;color:#28424a}
 </style>
 </head>
 <body><main class="card">
 <div class="brand">Dávila</div>
-<section id="config"><h1>Configurar sesión</h1><p>Gimnasia Laboral</p>
+<section id="login"><h1>Acceso administrador</h1><p>Gimnasia Laboral · Clínica Dávila</p><form id="login-form"><label for="correo">Correo electrónico</label><input type="email" id="correo" autocomplete="username" required placeholder="Tu Gmail autorizado"><label for="clave">Contraseña de Supabase</label><input type="password" id="clave" autocomplete="current-password" required><button type="submit" id="entrar">Ingresar</button></form><div class="status" id="login-estado" role="status">Inicia sesión con tu cuenta autorizada de Supabase.</div><div class="notice">Este acceso es exclusivo para personal autorizado. Si no recuerdas tu contraseña, puedes restablecerla desde Supabase Authentication.</div></section>
+<section id="config" class="hidden"><div class="session-bar"><span>Administración autorizada</span><button type="button" class="salir">Cerrar sesión</button></div><h1>Configurar sesión</h1><p>Gimnasia Laboral</p>
 <label for="fecha">Fecha</label><input type="date" id="fecha">
 <label for="edificio">Edificio</label><select id="edificio"></select>
 <label for="seccion">Sección / Área</label><select id="seccion"><option value="">Selecciona una sección</option></select>
@@ -30,7 +32,7 @@
 <button id="iniciar">Iniciar sesión de asistencia</button>
 <div class="notice"><span id="estado-secciones" role="status">Conectando con Google Sheets…</span></div>
 </section>
-<section id="registro" class="hidden">
+<section id="registro" class="hidden"><div class="session-bar"><span>Sesión protegida</span><button type="button" class="salir">Cerrar sesión</button></div>
 <div class="eyebrow" style="text-align:center">Gimnasia Laboral · Demostración</div>
 <h1>Registra tu asistencia</h1>
 <p id="resumen"></p>
@@ -45,8 +47,15 @@
 <div class="notice">Prueba de interfaz: no consulta funcionarios ni registra asistencias.</div>
 <div class="admin-bar"><button id="volver" type="button">Volver a configuración · Solo demostración</button></div>
 </section>
-</main><script>
+</main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script>
 const $=id=>document.getElementById(id);
+const sb=window.supabase?.createClient('https://gfeqnqaaruadocgddhyl.supabase.co','sb_publishable_IBQ6XkpiSMPzTE6GXzT2KA_crp15-H4',{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+let adminAutorizado=false;
+function bloquearAcceso(mensaje){adminAutorizado=false;$('login').classList.remove('hidden');$('config').classList.add('hidden');$('registro').classList.add('hidden');$('clave').value='';$('login-estado').textContent=mensaje||'Inicia sesión con tu cuenta autorizada de Supabase.'}
+async function validarSesion(session){if(!sb||!session){bloquearAcceso();return}const {data,error}=await sb.from('davila_admins').select('user_id').eq('user_id',session.user.id).maybeSingle();if(error||!data){await sb.auth.signOut();bloquearAcceso('Esta cuenta no está autorizada para administrar las asistencias.');return}adminAutorizado=true;$('login').classList.add('hidden');$('config').classList.remove('hidden');$('login-estado').textContent='Acceso autorizado.'}
+$('login-form').addEventListener('submit',async e=>{e.preventDefault();if(!sb){$('login-estado').textContent='No se pudo cargar el servicio de autenticación. Revisa la conexión.';return}const boton=$('entrar');boton.disabled=true;$('login-estado').textContent='Verificando acceso…';try{const {data,error}=await sb.auth.signInWithPassword({email:$('correo').value.trim(),password:$('clave').value});if(error)throw error;await validarSesion(data.session)}catch(err){bloquearAcceso('No se pudo iniciar sesión. Revisa tus credenciales de Supabase.')}finally{boton.disabled=false}});
+document.querySelectorAll('.salir').forEach(b=>b.addEventListener('click',async()=>{if(sb)await sb.auth.signOut();bloquearAcceso('Sesión cerrada.')}));
+if(sb){sb.auth.getSession().then(({data})=>validarSesion(data.session)).catch(()=>bloquearAcceso('No se pudo verificar la sesión.'));sb.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT')bloquearAcceso('Sesión cerrada.')})}else bloquearAcceso('No se pudo cargar Supabase.');
 const n=new Date();$('fecha').value=new Date(n.getTime()-n.getTimezoneOffset()*60000).toISOString().slice(0,10);
 for(const e of 'ABCDEFGHI')$('edificio').add(new Option('Edificio '+e,e));
 const API_URL='https://script.google.com/macros/s/AKfycbxzerbjRW1ykKbiAFj2usqKM7cQ3cnjS9jvlOBnQYb_CISYEs_p8v5wgyynLOOhlbZuow/exec';
@@ -79,7 +88,7 @@ $('edificio').addEventListener('change',cargarSecciones);
 $('seccion').addEventListener('change',()=>{$('otra-wrap').classList.toggle('hidden',$('seccion').value!=='__otra__')});
 cargarSecciones();
 conectarSheets();
-$('iniciar').onclick=()=>{const area=$('seccion').value==='__otra__'?$('otra').value.trim():$('seccion').value;if(!$('fecha').value||!area){alert('Completa la fecha y selecciona o escribe una sección.');return}const [y,m,d]=$('fecha').value.split('-');$('resumen').textContent=d+'/'+m+'/'+y+' · Edificio '+$('edificio').value+' · '+area;$('config').classList.add('hidden');$('registro').classList.remove('hidden');reiniciarRegistro();$('rut').focus()};
+$('iniciar').onclick=()=>{if(!adminAutorizado){bloquearAcceso('Inicia sesión para continuar.');return}const area=$('seccion').value==='__otra__'?$('otra').value.trim():$('seccion').value;if(!$('fecha').value||!area){alert('Completa la fecha y selecciona o escribe una sección.');return}const [y,m,d]=$('fecha').value.split('-');$('resumen').textContent=d+'/'+m+'/'+y+' · Edificio '+$('edificio').value+' · '+area;$('config').classList.add('hidden');$('registro').classList.remove('hidden');reiniciarRegistro();$('rut').focus()};
 function rutValido(valor){
  const limpio=valor.replace(/[^0-9kK]/g,'').toUpperCase();
  if(!/^\d{7,8}[0-9K]$/.test(limpio))return false;
