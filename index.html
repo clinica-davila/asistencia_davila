@@ -68,7 +68,7 @@ conectarSheets();
 $('iniciar').onclick=()=>{const area=$('seccion').value==='__otra__'?$('otra').value.trim():$('seccion').value;if(!$('fecha').value||!area){alert('Completa la fecha y selecciona o escribe una sección.');return}const [y,m,d]=$('fecha').value.split('-');$('resumen').textContent=d+'/'+m+'/'+y+' · Edificio '+$('edificio').value+' · '+area;$('config').classList.add('hidden');$('registro').classList.remove('hidden');reiniciarRegistro();$('rut').focus()};
 function rutValido(valor){
  const limpio=valor.replace(/[^0-9kK]/g,'').toUpperCase();
- if(!/^\\d{7,8}[0-9K]$/.test(limpio))return false;
+ if(!/^\d{7,8}[0-9K]$/.test(limpio))return false;
  const cuerpo=limpio.slice(0,-1),dv=limpio.slice(-1);
  let suma=0,multiplicador=2;
  for(let i=cuerpo.length-1;i>=0;i--){suma+=Number(cuerpo[i])*multiplicador;multiplicador=multiplicador===7?2:multiplicador+1}
