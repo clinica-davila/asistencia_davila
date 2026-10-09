@@ -29,7 +29,7 @@
 <label for="edificio">Edificio</label><select id="edificio"></select>
 <label for="seccion">Sección / Área</label><select id="seccion"><option value="">Selecciona una sección</option></select>
 <div id="otra-wrap" class="hidden"><label for="otra">Nombre de la sección</label><input id="otra" maxlength="100" placeholder="Escribe la sección"></div>
-<button id="iniciar">Iniciar sesión de asistencia</button>
+<button id="iniciar">Iniciar sesión de asistencia</button><button id="probar-backend" type="button" class="secondary">Comprobar conexión protegida</button><div id="estado-backend" class="notice" role="status">La identificación de funcionarios aún no está habilitada.</div>
 <div class="notice"><span id="estado-secciones" role="status">Conectando con Google Sheets…</span></div>
 </section>
 <section id="registro" class="hidden"><div class="session-bar"><span>Sesión protegida</span><button type="button" class="salir">Cerrar sesión</button></div>
@@ -56,6 +56,7 @@ async function validarSesion(session){if(!sb||!session){bloquearAcceso();return}
 $('login-form').addEventListener('submit',async e=>{e.preventDefault();if(!sb){$('login-estado').textContent='No se pudo cargar el servicio de autenticación. Revisa la conexión.';return}const boton=$('entrar');boton.disabled=true;$('login-estado').textContent='Verificando acceso…';try{const {data,error}=await sb.auth.signInWithPassword({email:$('correo').value.trim(),password:$('clave').value});if(error)throw error;await validarSesion(data.session)}catch(err){bloquearAcceso('No se pudo iniciar sesión. Revisa tus credenciales de Supabase.')}finally{boton.disabled=false}});
 document.querySelectorAll('.salir').forEach(b=>b.addEventListener('click',async()=>{if(sb)await sb.auth.signOut();bloquearAcceso('Sesión cerrada.')}));
 if(sb){sb.auth.getSession().then(({data})=>validarSesion(data.session)).catch(()=>bloquearAcceso('No se pudo verificar la sesión.'));sb.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT')bloquearAcceso('Sesión cerrada.')})}else bloquearAcceso('No se pudo cargar Supabase.');
+$('probar-backend').addEventListener('click',async()=>{const status=$('estado-backend');status.textContent='Comprobando autorización…';if(!adminAutorizado){status.textContent='Debes iniciar sesión como administrador.';return}try{const {data:{session}}=await sb.auth.getSession();if(!session)throw new Error('Sesión expirada');const response=await fetch('https://gfeqnqaaruadocgddhyl.supabase.co/functions/v1/davila-identificar',{method:'POST',headers:{'authorization':'Bearer '+session.access_token,'apikey':'sb_publishable_IBQ6XkpiSMPzTE6GXzT2KA_crp15-H4','content-type':'application/json'},body:'{}'});const data=await response.json();status.textContent=response.status===503&&data.error?.includes('Google Sheets')?'Autorización verificada por el servidor. Falta conectar Google Sheets.':(data.error||'Respuesta del servidor: '+response.status)}catch(e){status.textContent='No se pudo comprobar la conexión. Revisa la sesión y vuelve a intentar.'}});
 const n=new Date();$('fecha').value=new Date(n.getTime()-n.getTimezoneOffset()*60000).toISOString().slice(0,10);
 for(const e of 'ABCDEFGHI')$('edificio').add(new Option('Edificio '+e,e));
 const API_URL='https://script.google.com/macros/s/AKfycbxzerbjRW1ykKbiAFj2usqKM7cQ3cnjS9jvlOBnQYb_CISYEs_p8v5wgyynLOOhlbZuow/exec';
