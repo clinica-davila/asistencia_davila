@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Asistencia Dávila</title>
 <style>
-*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f4f6f7;display:grid;place-items:center;min-height:100vh;margin:0;color:#28323b;padding:18px}.card{background:white;border-radius:20px;padding:30px;width:min(94vw,480px);box-shadow:0 10px 40px #0001}h1{text-align:center}p{text-align:center;color:#667}label{display:block;margin:18px 0 7px;font-weight:bold}input,select,button{width:100%;padding:14px;font-size:17px;border-radius:10px}input,select{border:1px solid #bbc6ca;background:white}button{background:#009c96;border:0;color:white;font-weight:bold;margin-top:24px;cursor:pointer}.hidden{display:none}.brand{text-align:center;font-size:30px;font-weight:bold;color:#555}.notice{font-size:13px;color:#687;text-align:center;margin-top:15px}
+*{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f4f6f7;display:grid;place-items:center;min-height:100vh;margin:0;color:#28323b;padding:18px}.card{background:white;border-radius:20px;padding:30px;width:min(94vw,480px);box-shadow:0 10px 40px #0001}h1{text-align:center}p{text-align:center;color:#667}label{display:block;margin:18px 0 7px;font-weight:bold}input,select,button{width:100%;padding:14px;font-size:17px;border-radius:10px}input,select{border:1px solid #bbc6ca;background:white}button{background:#009c96;border:0;color:white;font-weight:bold;margin-top:24px;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.secondary{background:#e9f0f1;color:#28424a}.status{padding:12px;border-radius:10px;background:#f0f5f5;margin-top:14px;text-align:center}.rut-input{text-align:center;font-size:25px;letter-spacing:1px}.eyebrow{text-transform:uppercase;letter-spacing:1px;font-size:12px;color:#678;font-weight:bold}.hidden{display:none}.brand{text-align:center;font-size:30px;font-weight:bold;color:#555}.notice{font-size:13px;color:#687;text-align:center;margin-top:15px}
 </style>
 </head>
 <body><main class="card">
@@ -17,7 +17,20 @@
 <button id="iniciar">Iniciar sesión de asistencia</button>
 <div class="notice"><span id="estado-secciones" role="status">Conectando con Google Sheets…</span></div>
 </section>
-<section id="registro" class="hidden"><h1>Registro de asistencia</h1><p id="resumen"></p><label>Ingresa tu RUT</label><input placeholder="12.345.678-9" disabled><div class="notice">Próximamente: búsqueda y registro de participantes.</div><button id="volver">Volver a configuración (demo)</button></section>
+<section id="registro" class="hidden">
+<div class="eyebrow" style="text-align:center">Gimnasia Laboral · Vista de prueba</div>
+<h1>Registra tu asistencia</h1><p id="resumen"></p>
+<label for="rut">Ingresa tu RUT</label>
+<input id="rut" class="rut-input" type="text" inputmode="text" autocomplete="off" maxlength="14" placeholder="12.345.678-9" aria-describedby="rut-estado">
+<div id="rut-estado" class="status" role="status">Escribe tu RUT y presiona Continuar.</div>
+<button id="continuar" type="button">Continuar</button>
+<div id="paso-confirmacion" class="hidden">
+<p class="status">RUT válido. La búsqueda de funcionarios todavía no está habilitada.</p>
+<button id="confirmar" type="button" disabled>Confirmar asistencia (próximamente)</button>
+</div>
+<div class="notice">Modo de prueba: no se consulta ni se guarda información personal.</div>
+<button id="volver" class="secondary" type="button">Volver a configuración</button>
+</section>
 </main><script>
 const $=id=>document.getElementById(id);
 const n=new Date();$('fecha').value=new Date(n.getTime()-n.getTimezoneOffset()*60000).toISOString().slice(0,10);
@@ -52,6 +65,30 @@ $('edificio').addEventListener('change',cargarSecciones);
 $('seccion').addEventListener('change',()=>{$('otra-wrap').classList.toggle('hidden',$('seccion').value!=='__otra__')});
 cargarSecciones();
 conectarSheets();
-$('iniciar').onclick=()=>{const area=$('seccion').value==='__otra__'?$('otra').value.trim():$('seccion').value;if(!$('fecha').value||!area){alert('Completa la fecha y selecciona o escribe una sección.');return}const [y,m,d]=$('fecha').value.split('-');$('resumen').textContent=d+'/'+m+'/'+y+' · Edificio '+$('edificio').value+' · '+area;$('config').classList.add('hidden');$('registro').classList.remove('hidden')};
-$('volver').onclick=()=>{$('registro').classList.add('hidden');$('config').classList.remove('hidden')};
+$('iniciar').onclick=()=>{const area=$('seccion').value==='__otra__'?$('otra').value.trim():$('seccion').value;if(!$('fecha').value||!area){alert('Completa la fecha y selecciona o escribe una sección.');return}const [y,m,d]=$('fecha').value.split('-');$('resumen').textContent=d+'/'+m+'/'+y+' · Edificio '+$('edificio').value+' · '+area;$('config').classList.add('hidden');$('registro').classList.remove('hidden');reiniciarRegistro();$('rut').focus()};
+function rutValido(valor){
+ const limpio=valor.replace(/[^0-9kK]/g,'').toUpperCase();
+ if(!/^\\d{7,8}[0-9K]$/.test(limpio))return false;
+ const cuerpo=limpio.slice(0,-1),dv=limpio.slice(-1);
+ let suma=0,multiplicador=2;
+ for(let i=cuerpo.length-1;i>=0;i--){suma+=Number(cuerpo[i])*multiplicador;multiplicador=multiplicador===7?2:multiplicador+1}
+ const calculado=11-(suma%11);
+ return (calculado===11?'0':calculado===10?'K':String(calculado))===dv;
+}
+function reiniciarRegistro(){
+ $('rut').value='';
+ $('rut-estado').textContent='Escribe tu RUT y presiona Continuar.';
+ $('paso-confirmacion').classList.add('hidden');
+}
+$('rut').addEventListener('input',()=>{$('paso-confirmacion').classList.add('hidden');$('rut-estado').textContent='Escribe tu RUT y presiona Continuar.'});
+$('rut').addEventListener('keydown',e=>{if(e.key==='Enter')$('continuar').click()});
+$('continuar').onclick=()=>{
+ if(!rutValido($('rut').value)){
+  $('rut-estado').textContent='El RUT no es válido. Revisa el número y el dígito verificador.';
+  $('paso-confirmacion').classList.add('hidden');return;
+ }
+ $('rut-estado').textContent='Formato y dígito verificador correctos.';
+ $('paso-confirmacion').classList.remove('hidden');
+};
+$('volver').onclick=()=>{reiniciarRegistro();$('registro').classList.add('hidden');$('config').classList.remove('hidden')};
 </script></body></html>
