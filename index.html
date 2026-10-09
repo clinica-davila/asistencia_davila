@@ -5,6 +5,19 @@
 <title>Asistencia Dávila</title>
 <style>
 *{box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f4f6f7;display:grid;place-items:center;min-height:100vh;margin:0;color:#28323b;padding:18px}.card{background:white;border-radius:20px;padding:30px;width:min(94vw,480px);box-shadow:0 10px 40px #0001}h1{text-align:center}p{text-align:center;color:#667}label{display:block;margin:18px 0 7px;font-weight:bold}input,select,button{width:100%;padding:14px;font-size:17px;border-radius:10px}input,select{border:1px solid #bbc6ca;background:white}button{background:#009c96;border:0;color:white;font-weight:bold;margin-top:24px;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.secondary{background:#e9f0f1;color:#28424a}.status{padding:12px;border-radius:10px;background:#f0f5f5;margin-top:14px;text-align:center}.rut-input{text-align:center;font-size:25px;letter-spacing:1px}.eyebrow{text-transform:uppercase;letter-spacing:1px;font-size:12px;color:#678;font-weight:bold}.hidden{display:none}.brand{text-align:center;font-size:30px;font-weight:bold;color:#555}.notice{font-size:13px;color:#687;text-align:center;margin-top:15px}
+#registro h1{font-size:clamp(24px,5vw,30px);margin:10px 0 6px}
+#registro #resumen{font-size:14px;margin:5px 0 16px}
+#registro label{margin:12px 0 7px}
+#registro button{margin-top:12px}
+#registro .status{font-size:14px;padding:10px;margin-top:12px}
+#registro .notice{font-size:12px;margin-top:12px}
+#registro .rut-input{font-size:24px}
+#registro .admin-bar{text-align:center;margin-top:12px}
+#registro .admin-bar button{width:auto;background:transparent;color:#536b74;padding:8px 12px;font-size:13px;text-decoration:underline;font-weight:normal;margin:0}
+#registro .verified{border:1px solid #b6ddd5;background:#eef8f5;padding:12px;border-radius:12px;text-align:center;margin-top:12px}
+#registro .verified strong{display:block;margin-bottom:5px}
+@media(max-height:750px){.card{padding:18px 24px}#registro h1{margin:6px 0}#registro #resumen{margin:3px 0 9px}#registro .rut-input{padding:10px}}
+
 </style>
 </head>
 <body><main class="card">
@@ -18,18 +31,19 @@
 <div class="notice"><span id="estado-secciones" role="status">Conectando con Google Sheets…</span></div>
 </section>
 <section id="registro" class="hidden">
-<div class="eyebrow" style="text-align:center">Gimnasia Laboral · Vista de prueba</div>
-<h1>Registra tu asistencia</h1><p id="resumen"></p>
-<label for="rut">Ingresa tu RUT</label>
+<div class="eyebrow" style="text-align:center">Gimnasia Laboral · Demostración</div>
+<h1>Registra tu asistencia</h1>
+<p id="resumen"></p>
+<label for="rut">RUT</label>
 <input id="rut" class="rut-input" type="text" inputmode="text" autocomplete="off" maxlength="14" placeholder="12.345.678-9" aria-describedby="rut-estado">
-<div id="rut-estado" class="status" role="status">Escribe tu RUT y presiona Continuar.</div>
-<button id="continuar" type="button">Continuar</button>
+<div id="rut-estado" class="status" role="status">Ingresa tu RUT para continuar.</div>
+<button id="continuar" type="button">Verificar RUT</button>
 <div id="paso-confirmacion" class="hidden">
-<p class="status">RUT válido. La búsqueda de funcionarios todavía no está habilitada.</p>
+<div class="verified"><strong>RUT válido</strong><span>La identificación del funcionario estará disponible cuando conectemos el servicio protegido.</span></div>
 <button id="confirmar" type="button" disabled>Confirmar asistencia (próximamente)</button>
 </div>
-<div class="notice">Modo de prueba: no se consulta ni se guarda información personal.</div>
-<button id="volver" class="secondary" type="button">Volver a configuración</button>
+<div class="notice">Prueba de interfaz: no consulta funcionarios ni registra asistencias.</div>
+<div class="admin-bar"><button id="volver" type="button">Volver a configuración · Solo demostración</button></div>
 </section>
 </main><script>
 const $=id=>document.getElementById(id);
@@ -77,10 +91,10 @@ function rutValido(valor){
 }
 function reiniciarRegistro(){
  $('rut').value='';
- $('rut-estado').textContent='Escribe tu RUT y presiona Continuar.';
+ $('rut-estado').textContent='Ingresa tu RUT para continuar.';
  $('paso-confirmacion').classList.add('hidden');
 }
-$('rut').addEventListener('input',()=>{$('paso-confirmacion').classList.add('hidden');$('rut-estado').textContent='Escribe tu RUT y presiona Continuar.'});
+$('rut').addEventListener('input',()=>{$('paso-confirmacion').classList.add('hidden');$('rut-estado').textContent='Ingresa tu RUT para continuar.'});
 $('rut').addEventListener('keydown',e=>{if(e.key==='Enter')$('continuar').click()});
 $('continuar').onclick=()=>{
  if(!rutValido($('rut').value)){
